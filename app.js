@@ -341,28 +341,26 @@ async function fetchEconomicCalendar() {
     container.innerHTML = '<div class="news-countdown">Fetching live economic data...</div>';
 
     try {
-        // Fetch from yesterday to 3 days ahead to get a good spread of recent and upcoming events
-        const today = new Date();
-        const fromDate = new Date(today);
-        fromDate.setDate(today.getDate() - 1);
-        const toDate = new Date(today);
-        toDate.setDate(today.getDate() + 3);
-
-        const fromStr = `${fromDate.getFullYear()}-${pad(fromDate.getMonth() + 1)}-${pad(fromDate.getDate())}`;
-        const toStr = `${toDate.getFullYear()}-${pad(toDate.getMonth() + 1)}-${pad(toDate.getDate())}`;
-
-        const url = `https://finnhub.io/api/v1/economic?from=${fromStr}&to=${toStr}&token=${FINNHUB_API_KEY}`;
+        // Fetch real, live ForexFactory calendar data directly via nfs.faireconomy.media
+        // Bypassing CORS using corsproxy.io since this is a frontend-only app
+        const targetUrl = `https://nfs.faireconomy.media/ff_calendar_thisweek.json`;
+        const url = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
         const response = await fetch(url);
 
         if (!response.ok) throw new Error('Failed to fetch calendar');
 
-        const data = await response.json();
-        const events = data.economicCalendar || [];
+        const events = await response.json();
+        const nowMs = new Date().getTime();
 
-        // Filter for high/medium impact only to avoid clutter, sort by time
+        // Filter for high/medium impact, currently relevant (not older than 1 day), sort by time
         LIVE_NEWS = events
             .filter(e => e.impact === 'High' || e.impact === 'Medium' || e.impact === 'high' || e.impact === 'medium')
-            .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime())
+            .filter(e => {
+                // Ensure the event isn't too old (keep events from the last 24 hours to 7 days ahead)
+                const eventTime = new Date(e.date).getTime();
+                return eventTime > nowMs - (24 * 60 * 60 * 1000);
+            })
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
             .slice(0, 10); // Display top 10
 
         initializeNewsUI();
@@ -370,53 +368,7 @@ async function fetchEconomicCalendar() {
 
     } catch (err) {
         console.error('Economic API Error:', err);
-        container.innerHTML = '<div class="news-countdown impact-high-text" style="margin-bottom: 1rem;">Live API Restricted (403). Falling back to mock data.</div>';
-
-        // Fallback to realistic mock data if the Finnhub API key doesn't have Economic Calendar access
-        LIVE_NEWS = [
-            { event: 'Non-Farm Employment Change', country: 'US', impact: 'High', time: getIsoDateOffset(0, 8, 30), estimate: '200K', actual: null },
-            { event: 'Main Refinancing Rate', country: 'EMU', impact: 'High', time: getIsoDateOffset(0, 13, 15), estimate: '4.50%', actual: null },
-            { event: 'GDP m/m', country: 'GB', impact: 'Medium', time: getIsoDateOffset(1, 7, 0), estimate: '0.2%', actual: null },
-            { event: 'Fed Chair Powell Speaks', country: 'US', impact: 'High', time: getIsoDateOffset(1, 10, 0), estimate: null, actual: null },
-            { event: 'Caixin Services PMI', country: 'CN', impact: 'Low', time: getIsoDateOffset(2, 9, 45), estimate: '52.5', actual: null },
-            { event: 'BOJ Core CPI y/y', country: 'JP', impact: 'Medium', time: getIsoDateOffset(2, 14, 0), estimate: '2.8%', actual: null }
-        ];
-
-        // Call initialize UI again but append to the warning message instead of replacing it
-        const fallbackContainer = document.createElement('div');
-        fallbackContainer.style.display = 'contents';
-
-        LIVE_NEWS.forEach((news, idx) => {
-            const card = document.createElement('div');
-            card.className = 'news-card glass';
-            const impactLower = (news.impact || 'low').toLowerCase();
-
-            let folderIcon = '';
-            if (impactLower === 'high') {
-                folderIcon = `<svg class="folder-icon red" viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>`;
-            } else if (impactLower === 'medium') {
-                folderIcon = `<svg class="folder-icon yellow" viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>`;
-            } else {
-                folderIcon = `<svg class="folder-icon green" viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>`;
-            }
-
-            const currencyMap = { 'US': 'USD', 'EMU': 'EUR', 'GB': 'GBP', 'JP': 'JPY', 'CN': 'CNY', 'AU': 'AUD', 'CA': 'CAD', 'CH': 'CHF', 'NZ': 'NZD' };
-            const currency = currencyMap[news.country] || news.country;
-
-            card.innerHTML = `
-                <div class="news-header">
-                    <div class="news-meta">
-                        ${folderIcon}
-                        <span class="news-currency currency-${currency}">${currency}</span>
-                    </div>
-                    <span class="news-time" id="news-time-${idx}">--:--</span>
-                </div>
-                <div class="news-title">${news.event}</div>
-                <div class="news-countdown" id="news-countdown-${idx}">CALCULATING...</div>
-            `;
-            container.appendChild(card);
-        });
-        updateNews(); // Initialize countdowns
+        container.innerHTML = '<div class="news-countdown impact-high-text">Live API Connection Failed. Please disable AdBlockers or CORS extensions, or check network.</div>';
     }
 }
 
@@ -452,9 +404,7 @@ function initializeNewsUI() {
             folderIcon = `<svg class="folder-icon green" viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>`;
         }
 
-        // Finnhub countries are like 'US', map to general currency for UI
-        const currencyMap = { 'US': 'USD', 'EMU': 'EUR', 'GB': 'GBP', 'JP': 'JPY', 'CN': 'CNY', 'AU': 'AUD', 'CA': 'CAD', 'CH': 'CHF', 'NZ': 'NZD' };
-        const currency = currencyMap[news.country] || news.country;
+        const currency = news.country;
 
         card.innerHTML = `
             <div class="news-header">
@@ -464,7 +414,7 @@ function initializeNewsUI() {
                 </div>
                 <span class="news-time" id="news-time-${idx}">--:--</span>
             </div>
-            <div class="news-title">${news.event}</div>
+            <div class="news-title">${news.title}</div>
             <div class="news-countdown" id="news-countdown-${idx}">CALCULATING...</div>
         `;
         container.appendChild(card);
@@ -475,8 +425,8 @@ function updateNews() {
     const now = new Date();
 
     LIVE_NEWS.forEach((news, idx) => {
-        // Finnhub returns ISO dates like "2023-10-06 12:30:00" in UTC
-        const targetDate = new Date(news.time + 'Z');
+        // The ForexFactory JSON gives dates like "2023-11-03T08:30:00-04:00" which parse natively
+        const targetDate = new Date(news.date);
         const timeDiff = targetDate.getTime() - now.getTime();
 
         const cdEl = document.getElementById(`news-countdown-${idx}`);
@@ -490,11 +440,11 @@ function updateNews() {
 
         if (timeDiff <= 0 && timeDiff > -3600000) {
             // Data just released! Show actual vs estimate if available
-            const act = news.actual ? `ACTUAL: ${news.actual}` : 'DATA RELEASED';
+            const act = (news.actual && news.actual !== '') ? `ACTUAL: ${news.actual}` : 'DATA RELEASED';
             cdEl.innerText = act;
             cdEl.className = 'news-countdown pulsate impact-high-text';
         } else if (timeDiff <= -3600000) {
-            cdEl.innerText = news.actual ? `ACT: ${news.actual} | EST: ${news.estimate}` : 'PAST EVENT';
+            cdEl.innerText = (news.actual && news.actual !== '') ? `ACT: ${news.actual} | EST: ${news.forecast}` : 'PAST EVENT';
             cdEl.className = 'news-countdown past';
         } else {
             cdEl.className = 'news-countdown';
