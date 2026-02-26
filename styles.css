@@ -400,3 +400,194 @@ footer {
 .pulsate {
     animation: terminalPulse 1.5s infinite;
 }
+
+/* --- PRO TERMINAL FEATURES --- */
+
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    position: relative;
+    padding-bottom: 0.5rem;
+}
+
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.overlap-indicator {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 800;
+    padding: 0.25rem 0.75rem;
+    border-radius: 2px;
+    letter-spacing: 1px;
+    background: #222;
+    color: var(--text-secondary);
+    border: 1px solid #333;
+}
+
+.overlap-indicator.normal {
+    background: rgba(0, 255, 102, 0.1);
+    color: var(--status-open);
+    border-color: rgba(0, 255, 102, 0.4);
+}
+
+.overlap-indicator.high {
+    background: rgba(255, 204, 0, 0.1);
+    color: var(--status-holiday);
+    border-color: rgba(255, 204, 0, 0.4);
+}
+
+.overlap-indicator.extreme {
+    background: rgba(255, 0, 60, 0.15);
+    color: var(--status-closed);
+    border-color: rgba(255, 0, 60, 0.4);
+    animation: terminalPulse 1s infinite;
+}
+
+.btn-settings {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem;
+}
+
+.btn-settings:hover {
+    color: #fff;
+}
+
+.settings-panel {
+    position: absolute;
+    top: 50px;
+    right: 1rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    padding: 1.5rem;
+    border-radius: 4px;
+    z-index: 100;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9);
+    text-align: left;
+    min-width: 250px;
+}
+
+.settings-panel h3 {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #333;
+    padding-bottom: 0.5rem;
+}
+
+.setting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    font-family: var(--font-ui);
+    color: #ddd;
+    cursor: pointer;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* TradingView Chart Overlay */
+.chart-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+}
+
+.chart-modal {
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    border-radius: 4px;
+    width: 90%;
+    max-width: 1000px;
+    box-shadow: 0 0 40px rgba(0, 255, 102, 0.1);
+    display: flex;
+    flex-direction: column;
+}
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-card);
+}
+
+.chart-header h3 {
+    font-family: var(--font-mono);
+    color: #fff;
+    font-size: 1.2rem;
+    letter-spacing: 1px;
+}
+
+#close-chart {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+#close-chart:hover {
+    color: var(--status-closed);
+}
+
+.tv-chart {
+    width: 100%;
+    height: 400px;
+}
+
+.ticker-item {
+    cursor: pointer;
+    transition: transform 0.1s, background 0.2s;
+    padding: 0.2rem 0.5rem;
+    border-radius: 2px;
+}
+
+.ticker-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    transform: translateY(-1px);
+}
+
+/* Flash Red Animation for high-impact drops */
+@keyframes screenFlashAlert {
+    0% {
+        box-shadow: inset 0 0 0 0 rgba(255, 0, 60, 0);
+    }
+
+    10% {
+        box-shadow: inset 0 0 150px 20px rgba(255, 0, 60, 0.4);
+    }
+
+    100% {
+        box-shadow: inset 0 0 0 0 rgba(255, 0, 60, 0);
+    }
+}
+
+body.flash-red {
+    animation: screenFlashAlert 1s ease-out;
+}

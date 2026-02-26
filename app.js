@@ -49,14 +49,12 @@ const SESSIONS = [
         workdays: [1, 2, 3, 4, 5]
     },
     {
-        id: 'hk',
-        name: 'Hong Kong (HK)',
-        timezone: 'Asia/Hong_Kong',
-        openHour: 9, openMinute: 30,
-        closeHour: 16, closeMinute: 0,
-        lunchStartH: 12, lunchStartM: 0,
-        lunchEndH: 13, lunchEndM: 0,
-        holidays: ['2026-01-01', '2026-02-17', '2026-02-18', '2026-02-19', '2026-04-03', '2026-04-04', '2026-04-06', '2026-04-07', '2026-05-01', '2026-05-25', '2026-06-19', '2026-07-01', '2026-09-26', '2026-10-01', '2026-10-26', '2026-12-25', '2026-12-26'],
+        id: 'in',
+        name: 'Mumbai (IN)',
+        timezone: 'Asia/Kolkata',
+        openHour: 9, openMinute: 15,
+        closeHour: 15, closeMinute: 30,
+        holidays: ['2026-01-26', '2026-03-03', '2026-03-20', '2026-04-03', '2026-04-14', '2026-05-01', '2026-08-15', '2026-10-02', '2026-11-08', '2026-12-25'],
         workdays: [1, 2, 3, 4, 5]
     },
     {
@@ -88,13 +86,33 @@ const TICKERS = [
     { symbol: 'VGK', idx: 'EUROPE ETF' },
     { symbol: 'EWJ', idx: 'JAPAN ETF' },
     { symbol: 'MCHI', idx: 'CHINA ETF' },
-    { symbol: 'EWA', idx: 'AUSTRALIA ETF' }
+    { symbol: 'INDA', idx: 'INDIA ETF' }
 ];
 
 let LIVE_TICKERS = [];
 let LIVE_NEWS = [];
+let chartInstance = null;
+let lineSeries = null;
 
-console.log('ChronoMarket Logic Loading - Live Data Mode');
+// Settings
+let settings = {
+    audioEnabled: true
+};
+
+function loadSettings() {
+    const saved = localStorage.getItem('chronoSettings');
+    if (saved) {
+        settings = JSON.parse(saved);
+    }
+    const audioToggle = document.getElementById('toggle-audio');
+    if (audioToggle) audioToggle.checked = settings.audioEnabled;
+}
+
+function saveSettings() {
+    localStorage.setItem('chronoSettings', JSON.stringify(settings));
+}
+
+console.log('ChronoMarket Logic Loading - Pro Terminal Mode');
 
 // --- Advanced Time Helpers ---
 
@@ -243,6 +261,8 @@ function updateClocks() {
     const now = new Date();
     const nowMs = now.getTime();
 
+    let openMarketsCount = 0;
+
     SESSIONS.forEach(session => {
         const local = getZoneTimeParts(now, session.timezone);
         const timeStr = `${pad(local.hour)}:${pad(local.minute)}:<span class="sec">${pad(local.second)}</span>`;
@@ -276,6 +296,7 @@ function updateClocks() {
         holidayEl.style.display = 'none';
 
         if (isOpen) {
+            openMarketsCount++;
             // Market is currently OPEN. Countdown to close or lunch.
             card.classList.add('open');
             statusEl.innerText = "ACTIVE";
@@ -310,10 +331,40 @@ function updateClocks() {
 
             labelEl.innerText = "OPENS IN";
 
-            const nextOpenTs = findNextOpenTimestamp(nowMs, session);
+            // Audio Alert: 5 minutes to open
+            if (statusEl.innerText !== "HOLIDAY" && nextOpenTs - nowMs > 0 && nextOpenTs - nowMs <= 300000 && nextOpenTs - nowMs > 299000) {
+                playAudio('audio-ding');
+            }
             renderCountdown(nowMs, nextOpenTs, countdownEl);
         }
     });
+
+    // Overlap Indicator Logic
+    const overlapEl = document.getElementById('overlap-indicator');
+    if (overlapEl) {
+        if (openMarketsCount >= 3) {
+            overlapEl.innerText = "Session Overlap: EXTREME";
+            overlapEl.className = "overlap-indicator extreme";
+        } else if (openMarketsCount === 2) {
+            overlapEl.innerText = "Session Overlap: HIGH";
+            overlapEl.className = "overlap-indicator high";
+        } else if (openMarketsCount === 1) {
+            overlapEl.innerText = "Session Overlap: NORMAL";
+            overlapEl.className = "overlap-indicator normal";
+        } else {
+            overlapEl.innerText = "Session Overlap: LOW (PRE-MARKET)";
+            overlapEl.className = "overlap-indicator";
+        }
+    }
+}
+
+function playAudio(id) {
+    if (!settings.audioEnabled) return;
+    const a = document.getElementById(id);
+    if (a) {
+        a.currentTime = 0;
+        a.play().catch(e => console.log('Audio blocked by browser policy until user interacts.'));
+    }
 }
 
 function renderCountdown(nowMs, targetMs, el) {
@@ -443,6 +494,15 @@ function updateNews() {
             const act = (news.actual && news.actual !== '') ? `ACTUAL: ${news.actual}` : 'DATA RELEASED';
             cdEl.innerText = act;
             cdEl.className = 'news-countdown pulsate impact-high-text';
+
+            // Audio Alert: Play exact moment it drops
+            if (timeDiff > -1000) {
+                playAudio('audio-drop');
+                if (news.impact.toLowerCase() === 'high') {
+                    document.body.classList.add('flash-red');
+                    setTimeout(() => document.body.classList.remove('flash-red'), 1000);
+                }
+            }
         } else if (timeDiff <= -3600000) {
             cdEl.innerText = (news.actual && news.actual !== '') ? `ACT: ${news.actual} | EST: ${news.forecast}` : 'PAST EVENT';
             cdEl.className = 'news-countdown past';
@@ -518,13 +578,99 @@ function renderTickers() {
             <span class="ticker-price">${t.value.toFixed(2)}</span>
             <span class="ticker-change ${changeClass}">${sign}${t.changePerc.toFixed(2)}%</span>
         `;
+
+        // TradingView Integration (Click to open chart)
+        item.addEventListener('click', () => openChart(t.symbol, t.idx));
+
         tickerBar.appendChild(item);
     });
 }
 
+// TradingView Chart Logic
+function openChart(titleName, symbol) {
+    document.getElementById('chart-title').innerText = titleName + ' Intraday Status';
+    document.getElementById('chart-overlay').classList.remove('hidden');
+
+    const chartContainer = document.getElementById('tv-chart');
+    if (!chartInstance) {
+        chartInstance = LightweightCharts.createChart(chartContainer, {
+            width: chartContainer.clientWidth,
+            height: 400,
+            layout: {
+                background: { color: '#000000' },
+                textColor: '#d1d4dc',
+            },
+            grid: {
+                vertLines: { color: '#2B2B43' },
+                horzLines: { color: '#2B2B43' },
+            },
+            timeScale: { timeVisible: true, secondsVisible: false },
+            rightPriceScale: {
+                borderVisible: false,
+            },
+        });
+        lineSeries = chartInstance.addLineSeries({
+            color: '#00ff73',
+            lineWidth: 2,
+            crosshairMarkerVisible: true,
+            lastValueVisible: true,
+            priceLineVisible: true,
+        });
+
+        window.addEventListener('resize', () => {
+            if (chartContainer) chartInstance.resize(chartContainer.clientWidth, 400);
+        });
+    }
+
+    // Reset Data visually during fetch
+    if (lineSeries) lineSeries.setData([]);
+
+    // Fetch historical data for line chart (Finnhub candle endpoint - last 2 days)
+    const to = Math.floor(Date.now() / 1000);
+    const from = to - (2 * 24 * 60 * 60);
+    fetch(`https://finnhub.io/api/v1/stock/candle?symbol=${symbol}&resolution=15&from=${from}&to=${to}&token=${FINNHUB_API_KEY}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.s === 'ok' && data.t && data.c) {
+                const chartData = data.t.map((time, index) => ({
+                    time: time,
+                    value: data.c[index]
+                }));
+                lineSeries.setData(chartData);
+                chartInstance.timeScale().fitContent();
+            } else {
+                console.error('No chart data found for', symbol);
+            }
+        })
+        .catch(err => console.error('Chart API Error', err));
+}
+
 // Ensure the code runs after DOM is fully loaded
 document.addEventListener('DOMContentLoaded', () => {
+    loadSettings();
     initializeUI();
+
+    // Settings Toggle logic
+    document.getElementById('btn-settings').addEventListener('click', () => {
+        document.getElementById('settings-panel').classList.toggle('hidden');
+    });
+
+    // Audio Toggle Logic
+    const toggleAudio = document.getElementById('toggle-audio');
+    if (toggleAudio) {
+        toggleAudio.addEventListener('change', (e) => {
+            settings.audioEnabled = e.target.checked;
+            saveSettings();
+        });
+    }
+
+    // Chart Close Logic
+    const closeChartBtn = document.getElementById('close-chart');
+    if (closeChartBtn) {
+        closeChartBtn.addEventListener('click', () => {
+            document.getElementById('chart-overlay').classList.add('hidden');
+        });
+    }
 
     // Initial fetches
     fetchEconomicCalendar(); // Live News
@@ -536,8 +682,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(updateNews, 1000);
 
     // Rate limited API polling
-    // Finnhub allows 60 calls/min. We have 7 tickers + 1 economic call = 8 calls per poll.
-    // Polling every 15 seconds uses ~32 calls/min (well within free limits).
     setInterval(fetchTickers, 15000);
-    setInterval(fetchEconomicCalendar, 3600000); // Only refresh calendar once an hour to save calls
+    setInterval(fetchEconomicCalendar, 3600000);
 });
