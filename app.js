@@ -331,6 +331,8 @@ function updateClocks() {
 
             labelEl.innerText = "OPENS IN";
 
+            const nextOpenTs = findNextOpenTimestamp(nowMs, session);
+
             // Audio Alert: 5 minutes to open
             if (statusEl.innerText !== "HOLIDAY" && nextOpenTs - nowMs > 0 && nextOpenTs - nowMs <= 300000 && nextOpenTs - nowMs > 299000) {
                 playAudio('audio-ding');
@@ -393,12 +395,27 @@ async function fetchEconomicCalendar() {
 
     try {
         // Fetch real, live ForexFactory calendar data directly via nfs.faireconomy.media
-        // Bypassing CORS using corsproxy.io since this is a frontend-only app
         const targetUrl = `https://nfs.faireconomy.media/ff_calendar_thisweek.json`;
-        const url = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
-        const response = await fetch(url);
 
-        if (!response.ok) throw new Error('Failed to fetch calendar');
+        // Use multiple CORS proxies as fallbacks in case of 429 rate limiting
+        const proxies = [
+            `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`,
+            `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`,
+            `https://thingproxy.freeboard.io/fetch/${targetUrl}`
+        ];
+
+        let response = null;
+        for (const proxy of proxies) {
+            try {
+                const res = await fetch(proxy);
+                if (res.ok) {
+                    response = res;
+                    break;
+                }
+            } catch (e) { /* ignore and try next */ }
+        }
+
+        if (!response || !response.ok) throw new Error('Failed to fetch calendar from all proxies');
 
         const events = await response.json();
         const nowMs = new Date().getTime();
