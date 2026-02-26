@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChronoMarket - Global Trading Sessions</title>
+    <meta name="description" content="Track global market hours, sessions, holidays, and news events in real-time.">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <div class="header-content">
+                <h1>ChronoMarket</h1>
+                <p>Global Trading Sessions & News Countdown</p>
+            </div>
+            <div class="market-ticker" id="ticker-bar">
+                <!-- Ticker items will be injected here via JS -->
+                <div class="ticker-loading">Loading live indices...</div>
+            </div>
+        </header>
+
+        <main>
+            <div class="clocks-container" id="clocks-container">
+                <!-- Clock cards injected via JS -->
+            </div>
+
+            <section class="news-section">
+                <h2>Upcoming Major Events</h2>
+                <div class="news-container" id="news-container">
+                    <!-- News items injected via JS -->
+                </div>
+            </section>
+        </main>
+        
+        <footer>
+            <p>&copy; 2026 ChronoMarket - Times adapt automatically to DST</p>
+        </footer>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

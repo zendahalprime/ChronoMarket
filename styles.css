@@ -1,0 +1,339 @@
+:root {
+    --bg-main: #0a0a0c;
+    --bg-card: rgba(25, 25, 30, 0.6);
+    --border-card: rgba(255, 255, 255, 0.08);
+    --text-primary: #f0f0f5;
+    --text-secondary: #9ea0a6;
+    --accent: #5e6ad2;
+    --status-open: #00e676;
+    --status-closed: #ff1744;
+    --status-holiday: #ffc400;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Outfit', sans-serif;
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+}
+
+/* Glassmorphism setup */
+.glass {
+    background: var(--bg-card);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border-card);
+    border-radius: 16px;
+}
+
+#app {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+header {
+    text-align: center;
+    padding: 2rem 1rem;
+    background: linear-gradient(180deg, rgba(10, 10, 12, 1) 0%, rgba(20, 20, 25, 0) 100%);
+    position: relative;
+    z-index: 10;
+}
+
+.header-content h1 {
+    font-size: 3rem;
+    font-weight: 700;
+    background: linear-gradient(90deg, #fff, var(--text-secondary));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.5rem;
+    letter-spacing: -1px;
+}
+
+.header-content p {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Market Ticker */
+.market-ticker {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 1rem;
+    overflow-x: auto;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--border-card);
+    scrollbar-width: none;
+    /* Firefox */
+}
+
+.market-ticker::-webkit-scrollbar {
+    display: none;
+    /* Chrome/Safari */
+}
+
+.ticker-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.ticker-symbol {
+    color: var(--text-secondary);
+}
+
+.ticker-price {
+    color: var(--text-primary);
+}
+
+.ticker-change.up {
+    color: var(--status-open);
+}
+
+.ticker-change.down {
+    color: var(--status-closed);
+}
+
+.ticker-loading {
+    color: var(--text-secondary);
+    font-style: italic;
+    font-size: 0.9rem;
+}
+
+/* Main Layout */
+main {
+    flex: 1;
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.clocks-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 4rem;
+}
+
+/* Session Cards */
+.session-card {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: default;
+    position: relative;
+    overflow: hidden;
+}
+
+.session-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.session-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--text-secondary);
+    transition: background 0.3s ease;
+}
+
+.session-card.open::before {
+    background: var(--status-open);
+    box-shadow: 0 0 15px var(--status-open);
+}
+
+.session-card.closed::before {
+    background: var(--status-closed);
+}
+
+.session-card.holiday::before {
+    background: var(--status-holiday);
+}
+
+.session-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.session-name {
+    font-size: 1.4rem;
+    font-weight: 600;
+}
+
+.session-status {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+    padding: 0.25rem 0.6rem;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.session-card.open .session-status {
+    color: var(--status-open);
+    background: rgba(0, 230, 118, 0.1);
+}
+
+.session-card.closed .session-status {
+    color: var(--status-closed);
+    background: rgba(255, 23, 68, 0.1);
+}
+
+.session-card.holiday .session-status {
+    color: var(--status-holiday);
+    background: rgba(255, 196, 0, 0.1);
+}
+
+.local-time {
+    font-size: 2.5rem;
+    font-weight: 300;
+    letter-spacing: 2px;
+    font-variant-numeric: tabular-nums;
+}
+
+.countdown-wrapper {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.countdown-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.countdown-timer {
+    font-size: 1.1rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.holiday-note {
+    font-size: 0.9rem;
+    color: var(--status-holiday);
+    font-style: italic;
+    margin-top: 0.5rem;
+}
+
+/* News Section */
+.news-section {
+    margin-top: 2rem;
+}
+
+.news-section h2 {
+    margin-bottom: 1.5rem;
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.news-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.news-card {
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    border-left: 4px solid var(--accent);
+}
+
+.news-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.news-impact {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 700;
+}
+
+.impact-high {
+    background: rgba(255, 23, 68, 0.2);
+    color: #ff5252;
+}
+
+.impact-medium {
+    background: rgba(255, 196, 0, 0.2);
+    color: #ffd740;
+}
+
+.impact-low {
+    background: rgba(0, 230, 118, 0.2);
+    color: #69f0ae;
+}
+
+.news-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.news-time {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.news-countdown {
+    font-weight: 600;
+    color: var(--accent);
+    margin-top: auto;
+}
+
+footer {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    border-top: 1px solid var(--border-card);
+}
+
+/* Animations */
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.6;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+.pulsate {
+    animation: pulse 2s infinite;
+}
